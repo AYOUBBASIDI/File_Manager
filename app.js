@@ -115,6 +115,10 @@ xlsx.writeFile(outputWorkbook, outputFolder+'/output.xlsx');
     res.redirect('/success') 
 });
 
+app.use((req, res, next) => {
+  res.status(404).render('error404'); // Render your custom 404 page
+});
+
 
 
 app.listen(PORT, () => {
