@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel Processing Interface</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Excel Processing Interface</h1>
+    <% if (typeof error !== 'undefined' && error !== null) { %>
+      <div class="error-message">
+        <%= error %>
+      </div>
+    <% } %>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <label for="excelFile">Excel File:</label>
+      <input type="file" name="excelFile" id="excelFile" accept=".xlsx"><br>
+      <label for="storageFolder">Storage Folder:</label>
+      <input type="text" name="storageFolder" id="storageFolder"><br>
+      <label for="outputExcelPath">Output Folder:</label>
+      <input type="text" name="outputExcelPath" id="outputExcelPath"><br>
+      <button type="submit" id="uploadButton" onclick="Loading()">
+        Upload <img src="./assets/svg/Spinner.svg" class="hidden" id="loadingSpinner" alt="Loading spinner" width="30px">
+      </button>
+      
+    </form>
+  </div>
+
+  <script>
+    function Loading(){
+        document.getElementById('loadingSpinner').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
