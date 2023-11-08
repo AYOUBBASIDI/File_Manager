@@ -4,6 +4,7 @@ const xlsx = require('xlsx');
 const path = require('path');
 const multer = require('multer');
 const bodyParser = require('body-parser');
+const port = 4000;
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -115,6 +116,6 @@ xlsx.writeFile(outputWorkbook, outputFolder+'/output.xlsx');
 
 
 
-app.listen(3000, () => {
-  console.log('Server started on port 3000');
+app.listen(port, () => {
+  console.log('Server started');
 });
