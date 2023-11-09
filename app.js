@@ -42,7 +42,7 @@ app.post('/upload', upload.single('excelFile'), (req, res) => {
     return res.render('index', { error: 'Output folder not found. Please try again.' });
   }
 
-  const outputFolder = outputExcelPath +'/generated_folders';
+  const outputFolder = outputExcelPath + '/generated_folders';
   const inputExcelPath = path.join(__dirname, 'uploads', req.file.filename);
   const workbook = xlsx.readFile(inputExcelPath);
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -52,67 +52,66 @@ app.post('/upload', upload.single('excelFile'), (req, res) => {
   // Create a directory for generated folders
   fs.ensureDirSync(outputFolder);
 
-// Initialize a variable to store the output data for the Excel file
-const outputData = [];
+  // Initialize a variable to store the output data for the Excel file
+  const outputData = [];
 
-// Iterate through Excel rows and process the data
-const excelData = xlsx.utils.sheet_to_json(worksheet, { header: ['id', 'images'] });
+  // Iterate through Excel rows and process the data
+  const excelData = xlsx.utils.sheet_to_json(worksheet, { header: ['id', 'images'] });
 
-excelData.forEach(row => {
-  const id = row.id;
-  const images = row.images.split(',');
+  excelData.forEach(row => {
+    const id = row.id;
+    const images = row.images.split(',');
 
-  // Create a directory for the current ID
-  const idFolderPath = `${outputFolder}/${id}`;
-  fs.ensureDirSync(idFolderPath);
+    // Create a directory for the current ID
+    const idFolderPath = `${outputFolder}/${id}`;
+    fs.ensureDirSync(idFolderPath);
 
-  // Move images to the corresponding ID folder and update the output data
-  const rowData = {
-    id: id,
-    images: row.images,
-  };
+    // Move images to the corresponding ID folder and update the output data
+    const rowData = {
+      id: id,
+      images: row.images,
+    };
 
-  images.forEach(image => {
-    const imageName = image.trim();
-    const sourcePath = `${storageFolder}/${imageName}`;
-    const destinationPath = `${idFolderPath}/${imageName}`;
+    images.forEach(image => {
+      const imageName = image.trim();
+      const sourcePath = `${storageFolder}/${imageName}`;
+      const destinationPath = `${idFolderPath}/${imageName}`;
 
-    if (fs.existsSync(sourcePath)){
-      fs.copyFileSync(sourcePath, destinationPath);
-      console.log(`Moved ${imageName} to folder ${id}`);
-    }else{
-      console.log(`File ${imageName} not found at ${sourcePath}`);
-    }
+      if (fs.existsSync(sourcePath)) {
+        fs.copyFileSync(sourcePath, destinationPath);
+        console.log(`Moved ${imageName} to folder ${id}`);
+      } else {
+        console.log(`File ${imageName} not found at ${sourcePath}`);
+      }
 
-    // Add the image name to the output data row
-    rowData[`Image ${images.indexOf(image) + 1}`] = path.resolve(destinationPath);
+      // Add the image name to the output data row
+      rowData[`Image ${images.indexOf(image) + 1}`] = path.resolve(destinationPath);
+    });
+
+    images.forEach(image => {
+      const imageName = image.trim();
+      const sourcePath = `${storageFolder}/${imageName}`;
+
+      if (!fs.existsSync(sourcePath)) {
+        filesNotFound.push(imageName);
+        console.log(`File ${imageName} not found at ${sourcePath}`);
+      }
+    });
+
+    // Add the processed row data to the output data array
+    outputData.push(rowData);
   });
 
-  images.forEach(image => {
-    const imageName = image.trim();
-    const sourcePath = `${storageFolder}/${imageName}`;
+  fs.writeFileSync(outputFolder + '/not_found.txt', filesNotFound.join('\n'));
 
-    if (!fs.existsSync(sourcePath)) {
-      filesNotFound.push(imageName);
-      console.log(`File ${imageName} not found at ${sourcePath}`);
-    }
-  });
+  // Create a new workbook and write data to the output Excel file
+  const outputWorkbook = xlsx.utils.book_new();
+  const outputWorksheet = xlsx.utils.json_to_sheet(outputData);
+  xlsx.utils.book_append_sheet(outputWorkbook, outputWorksheet, 'Sheet1');
+  xlsx.writeFile(outputWorkbook, outputFolder + '/output.xlsx');
 
-  // Add the processed row data to the output data array
-  outputData.push(rowData);
-});
 
-fs.writeFileSync(outputFolder+'/not_found.txt', filesNotFound.join('\n'));
-
-// Create a new workbook and write data to the output Excel file
-const outputWorkbook = xlsx.utils.book_new();
-const outputWorksheet = xlsx.utils.json_to_sheet(outputData);
-xlsx.utils.book_append_sheet(outputWorkbook, outputWorksheet, 'Sheet1');
-xlsx.writeFile(outputWorkbook, outputFolder+'/output.xlsx');
-
-  // Send a response to the user when processing is completed
-   
-    res.redirect('/success') 
+  res.redirect('/success')
 });
 
 app.use((req, res, next) => {
