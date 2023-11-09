@@ -4,7 +4,7 @@ const xlsx = require('xlsx');
 const path = require('path');
 const multer = require('multer');
 const bodyParser = require('body-parser');
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -58,51 +58,81 @@ app.post('/upload', upload.single('excelFile'), (req, res) => {
   // Iterate through Excel rows and process the data
   const excelData = xlsx.utils.sheet_to_json(worksheet, { header: ['id', 'images'] });
 
+  const notFoundFilePath = path.join(__dirname, 'not_found.txt');
+  let notFoundImageNames = [];
+
+  if (fs.existsSync(notFoundFilePath)) {
+    const notFoundFileContent = fs.readFileSync(notFoundFilePath, 'utf-8');
+    notFoundImageNames = notFoundFileContent.split(',').map(name => name);
+  }
+  console.log(excelData)
+
   excelData.forEach(row => {
     const id = row.id;
     const images = row.images.split(',');
-
+  
     // Create a directory for the current ID
     const idFolderPath = `${outputFolder}/${id}`;
     fs.ensureDirSync(idFolderPath);
-
+  
     // Move images to the corresponding ID folder and update the output data
     const rowData = {
       id: id,
       images: row.images,
     };
-
+  
     images.forEach(image => {
-      const imageName = image.trim();
+
+      let imageName = image.trim().toLowerCase();
+      if (notFoundImageNames.includes(imageName)) {
+        console.log(`${imageName} included in not found list`);
+        // Attempt to find the image by adding a space before opening parenthesis
+        const openingParenthesisIndex = imageName.indexOf('(');
+        if (openingParenthesisIndex !== -1) {
+          imageName = `${imageName.slice(0, openingParenthesisIndex)} ${imageName.slice(openingParenthesisIndex)}`;
+          console.log('new image name : '+imageName);
+        }
+      }
       const sourcePath = `${storageFolder}/${imageName}`;
       const destinationPath = `${idFolderPath}/${imageName}`;
-
+  
       if (fs.existsSync(sourcePath)) {
         fs.copyFileSync(sourcePath, destinationPath);
         console.log(`Moved ${imageName} to folder ${id}`);
       } else {
         console.log(`File ${imageName} not found at ${sourcePath}`);
       }
-
+  
       // Add the image name to the output data row
       rowData[`Image ${images.indexOf(image) + 1}`] = path.resolve(destinationPath);
     });
-
+  
     images.forEach(image => {
-      const imageName = image.trim();
+      let imageName = image.trim().toLowerCase(); // Remove spaces and convert to lowercase
+      if (notFoundImageNames.includes(imageName)) {
+        console.log(`${imageName} included in not found list`);
+        // Attempt to find the image by adding a space before opening parenthesis
+        const openingParenthesisIndex = imageName.indexOf('(');
+        if (openingParenthesisIndex !== -1) {
+          imageName = `${imageName.slice(0, openingParenthesisIndex)} ${imageName.slice(openingParenthesisIndex)}`;
+          console.log('new image name : '+imageName);
+        }
+      }
       const sourcePath = `${storageFolder}/${imageName}`;
-
+  
+      
       if (!fs.existsSync(sourcePath)) {
         filesNotFound.push(imageName);
         console.log(`File ${imageName} not found at ${sourcePath}`);
       }
     });
-
+  
     // Add the processed row data to the output data array
     outputData.push(rowData);
   });
+  
 
-  fs.writeFileSync(outputFolder + '/not_found.txt', filesNotFound.join('\n'));
+  fs.writeFileSync(outputFolder + '/not_found.txt', filesNotFound.join(','));
 
   // Create a new workbook and write data to the output Excel file
   const outputWorkbook = xlsx.utils.book_new();
